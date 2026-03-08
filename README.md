@@ -85,6 +85,16 @@ Deploy the `frontend/dist` output to your S3 bucket (or the CDK stack will do it
 
 CORS is enabled for all origins. No auth.
 
+## CI/CD (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`): On every push and PR to `main`/`master` — installs deps, builds backend and frontend, runs `cdk synth`. No secrets required.
+- **Deploy** (`.github/workflows/deploy.yml`): On push to `main` (or **Run workflow** manually) — builds and runs `cdk deploy`. Requires GitHub **Secrets**:
+  - **AWS_ACCESS_KEY_ID** — IAM user access key with permission to deploy the CDK stack (and bootstrap).
+  - **AWS_SECRET_ACCESS_KEY** — IAM user secret key.
+  - **VITE_API_URL** — Your deployed API URL (e.g. from CDK output `ApiUrl`). Used when building the frontend so the deployed app calls the right API. Set this after the first deploy.
+
+To use **master** as the deploy branch, edit `deploy.yml` and change `branches: [main]` to `branches: [master]`.
+
 ## Schedule
 
 The daily job runs at **06:00 UTC** (EventBridge rule). To trigger it manually from the repo:

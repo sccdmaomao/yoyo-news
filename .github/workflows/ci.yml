@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install and build backend
+        run: |
+          cd backend
+          npm ci
+          npm run build
+
+      - name: Install and build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+        env:
+          VITE_API_URL: https://example.execute-api.ca-central-1.amazonaws.com
+
+      - name: Install and synth infrastructure
+        run: |
+          cd infrastructure
+          npm ci
+          npm run build
+          npx cdk synth
+        env:
+          CDK_DEFAULT_REGION: ca-central-1
