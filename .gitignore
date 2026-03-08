@@ -1,0 +1,24 @@
+# Dependencies and build
+node_modules/
+dist/
+*.tsbuildinfo
+
+# Environment and secrets
+.env
+.env.local
+.env.*.local
+
+# CDK and Lambda
+infrastructure/cdk.out/
+infrastructure/lambda-out.json
+infrastructure/lambda-response.json
+infrastructure/dist/
+backend/dist/
+backend/dist-lambda/
+
+# IDE and OS
+.idea/
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
