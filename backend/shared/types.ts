@@ -1,8 +1,18 @@
-/** News item in a digest (from LLM summary). */
+/** News item in a digest (from LLM summary). Bilingual: title/summary in English and Chinese. Legacy records may only have title/summary. */
 export interface NewsItem {
   id?: string;
-  title: string;
-  summary: string;
+  /** Legacy: single title (used when titleEn/titleZh missing). */
+  title?: string;
+  /** Legacy: single summary (used when summaryEn/summaryZh missing). */
+  summary?: string;
+  /** English title. */
+  titleEn?: string;
+  /** Chinese title. */
+  titleZh?: string;
+  /** English summary. */
+  summaryEn?: string;
+  /** Chinese summary. */
+  summaryZh?: string;
   url: string;
   source: string;
   publishedAt?: string;
@@ -26,14 +36,12 @@ export interface DigestSummary {
   createdAt: string;
 }
 
-/** User config (frontend localStorage). */
+/** User config (frontend localStorage). Language for digest generation removed; reading language is UI-only. */
 export interface UserConfig {
   countries: string[];
-  language: string;
 }
 
 /** Default config for the daily job when no per-user config exists. */
 export const DEFAULT_JOB_CONFIG: UserConfig = {
   countries: ["us"],
-  language: "en",
 };

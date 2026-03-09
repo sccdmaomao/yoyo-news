@@ -2,6 +2,7 @@ import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { getTableName, listDigests, getDigest, putDigest } from "../../shared/dynamo.js";
 import { generateDigestWithLlm } from "../../shared/llm.js";
+import { normalizeDigestItems } from "../../shared/normalize.js";
 import { DEFAULT_JOB_CONFIG, type UserConfig } from "../../shared/types.js";
 
 const dynamo = new DynamoDBClient({});
@@ -57,7 +58,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       return { statusCode: 204, headers: CORS_HEADERS };
     }
 
-    // POST /digests/refresh — generate and save today's digest, then return it (optional body: { countries?, language? })
+    // POST /digests/refresh — generate and save today's digest (optional body: { countries? })
     if (method === "POST" && (path === "/digests/refresh" || path === "/digests/refresh/")) {
       const date = new Date().toISOString().slice(0, 10);
       try {
@@ -77,14 +78,13 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
             if (Array.isArray(parsed.countries) && parsed.countries.length > 0) {
               config = {
                 countries: parsed.countries.filter((c) => typeof c === "string") as string[],
-                language: typeof parsed.language === "string" ? parsed.language : config.language,
               };
             }
           } catch {
             /* ignore invalid body, use default config */
           }
         }
-        console.log("[refresh] config", { countries: config.countries, language: config.language });
+        console.log("[refresh] config", { countries: config.countries });
         const items = await generateDigestWithLlm(config, date);
         console.log("[refresh] LLM returned", items.length, "items");
         await putDigest(dynamo, tableName, date, items);
@@ -96,7 +96,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
             id: digest!.date,
             date: digest!.date,
             createdAt: digest!.createdAt,
-            items: digest!.items,
+            items: normalizeDigestItems(digest!.items),
           })
         );
       } catch (err) {
@@ -144,7 +144,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
           id: digest.date,
           date: digest.date,
           createdAt: digest.createdAt,
-          items: digest.items,
+          items: normalizeDigestItems(digest.items),
         })
       );
     }

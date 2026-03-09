@@ -2,6 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { getDigest, type Digest, type NewsItem } from "./api";
 import { COUNTRIES } from "./config";
+import {
+  useReadingLanguage,
+  getDisplayTitle,
+  getDisplaySummary,
+  type ReadingLang,
+} from "./ReadingLanguageContext";
 
 function getCountryLabel(code: string): string {
   return COUNTRIES.find((c) => c.value === code)?.label ?? code.charAt(0).toUpperCase() + code.slice(1);
@@ -21,6 +27,7 @@ function groupByCountry(items: NewsItem[]): Map<string, NewsItem[]> {
 
 export default function DigestDetail() {
   const { date } = useParams<{ date: string }>();
+  const { readingLang, setReadingLang } = useReadingLanguage();
   const [digest, setDigest] = useState<Digest | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,13 +45,36 @@ export default function DigestDetail() {
   const multiCountry = hasCountryLabels && (byCountry.size > 1 || (byCountry.size === 1 && !byCountry.has("")));
 
   if (loading) return <p>Loading…</p>;
-  if (error) return <p style={{ color: "#f87171" }}>{error}</p>;
+  if (error) return <p style={{ color: "var(--error)" }}>{error}</p>;
   if (!digest) return <p>Digest not found.</p>;
+
+  const toggleLang = (next: ReadingLang) => () => setReadingLang(next);
 
   return (
     <div>
       <p><Link to="/">← Back to digests</Link></p>
-      <h1 style={{ marginBottom: "0.5rem" }}>{digest.date}</h1>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.75rem 1.5rem", marginBottom: "1rem" }}>
+        <h1 className="page-title" style={{ marginBottom: 0 }}>{digest.date}</h1>
+        <span className="reading-lang-toggle">
+          Read in:{" "}
+          <button
+            type="button"
+            className={`reading-lang-btn ${readingLang === "en" ? "active" : ""}`}
+            onClick={toggleLang("en")}
+            aria-pressed={readingLang === "en"}
+          >
+            English
+          </button>
+          <button
+            type="button"
+            className={`reading-lang-btn ${readingLang === "zh" ? "active" : ""}`}
+            onClick={toggleLang("zh")}
+            aria-pressed={readingLang === "zh"}
+          >
+            中文
+          </button>
+        </span>
+      </div>
       <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
         {new Date(digest.createdAt).toLocaleString()}
       </p>
@@ -60,10 +90,10 @@ export default function DigestDetail() {
                   <div className="news-item" key={item.id ?? i}>
                     <div className="title">
                       <a href={item.url} target="_blank" rel="noopener noreferrer">
-                        {item.title}
+                        {getDisplayTitle(item, readingLang)}
                       </a>
                     </div>
-                    <div className="summary">{item.summary}</div>
+                    <div className="summary">{getDisplaySummary(item, readingLang)}</div>
                     <div className="source">{item.source}</div>
                   </div>
                 ))}
@@ -76,10 +106,10 @@ export default function DigestDetail() {
             <div className="news-item" key={item.id ?? i}>
               <div className="title">
                 <a href={item.url} target="_blank" rel="noopener noreferrer">
-                  {item.title}
+                  {getDisplayTitle(item, readingLang)}
                 </a>
               </div>
-              <div className="summary">{item.summary}</div>
+              <div className="summary">{getDisplaySummary(item, readingLang)}</div>
               <div className="source">{item.source}</div>
             </div>
           ))}

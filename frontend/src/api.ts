@@ -9,12 +9,16 @@ export interface DigestSummary {
 
 export interface NewsItem {
   id?: string;
-  title: string;
-  summary: string;
+  /** Legacy: single title when bilingual fields missing. */
+  title?: string;
+  summary?: string;
+  titleEn?: string;
+  titleZh?: string;
+  summaryEn?: string;
+  summaryZh?: string;
   url: string;
   source: string;
   publishedAt?: string;
-  /** Set when digest is multi-country (one column per country). */
   country?: string;
 }
 
@@ -60,8 +64,8 @@ export async function getDigest(id: string): Promise<Digest | null> {
   return (await res.json()) as Digest;
 }
 
-/** Trigger manual generation of today's digest, then return it. Pass config for countries/language (e.g. from Settings). */
-export async function refreshTodayDigest(config?: { countries?: string[]; language?: string }): Promise<Digest> {
+/** Trigger manual generation of today's digest. Pass countries from Settings. */
+export async function refreshTodayDigest(config?: { countries?: string[] }): Promise<Digest> {
   const res = await fetch(`${API_BASE}/digests/refresh`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

@@ -28,7 +28,7 @@ export default function DigestList() {
     setError(null);
     try {
       const config = loadConfig();
-      await refreshTodayDigest({ countries: config.countries, language: config.language });
+      await refreshTodayDigest({ countries: config.countries });
       load();
       const today = new Date().toISOString().slice(0, 10);
       navigate(`/digests/${today}`);
@@ -43,16 +43,16 @@ export default function DigestList() {
 
   return (
     <div>
-      <h1 style={{ marginBottom: "1rem" }}>Daily digests</h1>
-      <p style={{ marginBottom: "1rem" }}>
+      <h1 className="page-title" style={{ marginBottom: "1rem" }}>Daily digests</h1>
+      <div className="digest-action">
         <button onClick={handleDigest} disabled={refreshing}>
           {refreshing ? "Generating…" : "Digest"}
         </button>
-        <span style={{ marginLeft: "0.5rem", color: "var(--muted)", fontSize: "0.9rem" }}>
+        <span className="hint">
           Generate today&apos;s digest now
         </span>
-      </p>
-      {error && <p style={{ color: "#f87171", marginBottom: "1rem" }}>{error}</p>}
+      </div>
+      {error && <p style={{ color: "var(--error)", marginBottom: "1rem" }}>{error}</p>}
       {digests.length === 0 && !refreshing && (
         <p style={{ color: "var(--muted)" }}>No digests yet. Use &quot;Digest&quot; above or wait for the daily job.</p>
       )}

@@ -2,6 +2,33 @@ import type { NewsItem } from "./types.js";
 import type { UserConfig } from "./types.js";
 import OpenAI from "openai";
 
+type BilingualItem = Record<string, unknown>;
+
+function normalizeBilingualItem(
+  item: Record<string, unknown>,
+  id: string,
+  country?: string
+): NewsItem {
+  const titleEn = String(item?.titleEn ?? item?.title ?? "").trim() || "Untitled";
+  const titleZh = String(
+    item?.titleZh ?? item?.title_zh ?? ""
+  ).trim() || titleEn;
+  const summaryEn = String(item?.summaryEn ?? item?.summary ?? "").trim() || "No summary.";
+  const summaryZh = String(
+    item?.summaryZh ?? item?.summary_zh ?? ""
+  ).trim() || summaryEn;
+  return {
+    id,
+    titleEn,
+    titleZh,
+    summaryEn,
+    summaryZh,
+    url: String(item?.url ?? "").trim() || "https://example.com",
+    source: String(item?.source ?? "").trim() || "Unknown",
+    ...(country ? { country } : {}),
+  };
+}
+
 // Groq is OpenAI-compatible; we use the same SDK with Groq's base URL.
 const GROQ_BASE_URL = "https://api.groq.com/openai/v1";
 
@@ -31,15 +58,17 @@ async function generateDigestWithGroq(
   const countries = config.countries.length > 0 ? config.countries : ["us"];
   const multiCountry = countries.length > 1;
   const countriesLabel = countries.map((c) => c.charAt(0).toUpperCase() + c.slice(1)).join(", ");
-  const langLabel = config.language === "zh" ? "Chinese" : "English";
+
+  const zhQuality =
+    "For each item, titleZh and summaryZh must describe the SAME story as titleEn and summaryEn. Write in natural, fluent Chinese (自然流利的中文) as a professional Chinese news editor would—clear headlines and 1–2 sentence summaries that make sense to a Chinese reader. Do not literally translate word-for-word; adapt for natural Chinese. Ensure the Chinese is coherent and factually matches the English.";
 
   const systemPrompt = multiCountry
-    ? `You are a news digest writer. Given a date, a list of countries, and a language, produce a JSON object with one key per country (use lowercase: ${countries.map((c) => `"${c}"`).join(", ")}). Each key's value is an array of exactly 10 of the most hot/trending news items for THAT country (politics, sports, economy, tech, world, etc.) for that day. Each item must have: "title", "summary" (1–2 sentences), "url" (real or placeholder https://example.com), "source". Use your knowledge of notable recent events. Output only valid JSON: an object like { "us": [ {...}, ... ], "canada": [ {...}, ... ] }. No other text.`
-    : `You are a news digest writer. Given a date, a list of countries, and a language, produce a JSON array of 5–10 of the most hot/trending news items across ALL categories (politics, sports, economy, tech, world, etc.) that would be relevant for that day. Each object must have exactly: "title" (string), "summary" (1–2 sentences), "url" (string; use a real news URL if you know one, otherwise a placeholder like https://example.com), "source" (string; publication or site name). Use your knowledge of notable recent events. Output only valid JSON: either a top-level array of objects, or an object with an "items" key that is such an array. No other text.`;
+    ? `You are a bilingual news digest writer. Given a date and a list of countries, produce a JSON object with one key per country (use lowercase: ${countries.map((c) => `"${c}"`).join(", ")}). Each key's value is an array of exactly 10 hot/trending news items for THAT country for that day. Each item must have: "titleEn" (English headline), "titleZh" (same story, Chinese headline in 中文), "summaryEn" (1–2 sentences in English), "summaryZh" (same story, 1–2 sentences in natural Chinese 中文), "url" (string), "source" (string). ${zhQuality} Use your knowledge of notable recent events. Output only valid JSON: an object like { "us": [ {...}, ... ], "canada": [ {...}, ... ] }. No other text.`
+    : `You are a bilingual news digest writer. Given a date and countries, produce a JSON array of 5–10 hot/trending news items across all categories for that day. Each item must have: "titleEn", "titleZh" (same story in 中文), "summaryEn", "summaryZh" (same story in natural Chinese 中文), "url", "source". ${zhQuality} Use your knowledge of notable recent events. Output only valid JSON: either a top-level array of objects, or an object with an "items" key that is such an array. No other text.`;
 
   const userPrompt = multiCountry
-    ? `Date: ${date}. Countries: ${countriesLabel}. Language: ${langLabel}. Produce exactly 10 items per country. Output a JSON object with keys ${countries.map((c) => `"${c}"`).join(", ")} and each value an array of 10 items. Use ${langLabel}.`
-    : `Date: ${date}. Countries: ${countriesLabel}. Language: ${langLabel}. Produce the digest in ${langLabel}. Include the hottest topics from all categories.`;
+    ? `Date: ${date}. Countries: ${countriesLabel}. Produce exactly 10 items per country. For each item: titleEn and titleZh are the same news story in English and Chinese; summaryEn and summaryZh are the same summary in both languages. Write Chinese (titleZh, summaryZh) in natural, readable 中文—like a real Chinese news digest—not awkward or literal translation.`
+    : `Date: ${date}. Countries: ${countriesLabel}. Produce the digest. For every item, titleZh/summaryZh must be the same story as titleEn/summaryEn, written in natural Chinese (自然中文) that reads well. Include the hottest topics from all categories.`;
 
   try {
     const completion = await client.chat.completions.create({
@@ -54,37 +83,25 @@ async function generateDigestWithGroq(
     const text = completion.choices[0]?.message?.content?.trim();
     if (!text) return getMockDigestItems(config, date);
 
-    const parsed = JSON.parse(text) as { items?: NewsItem[] } | NewsItem[] | Record<string, NewsItem[]>;
+    const parsed = JSON.parse(text) as { items?: BilingualItem[] } | BilingualItem[] | Record<string, BilingualItem[]>;
 
     if (multiCountry && !Array.isArray(parsed) && parsed !== null && typeof parsed === "object" && !("items" in parsed)) {
       const itemsByCountry = parsed as Record<string, unknown>;
       const items: NewsItem[] = [];
       for (const origKey of Object.keys(itemsByCountry)) {
         const normalized = countries.find((c) => c.toLowerCase() === origKey.toLowerCase()) ?? origKey.toLowerCase();
-        const arr = Array.isArray(itemsByCountry[origKey]) ? (itemsByCountry[origKey] as NewsItem[]) : [];
+        const arr = Array.isArray(itemsByCountry[origKey]) ? (itemsByCountry[origKey] as BilingualItem[]) : [];
         for (let i = 0; i < Math.min(arr.length, 10); i++) {
-          const item = arr[i] as Record<string, unknown>;
-          items.push({
-            id: `item-${normalized}-${i + 1}`,
-            title: String(item?.title ?? "").trim() || "Untitled",
-            summary: String(item?.summary ?? "").trim() || "No summary.",
-            url: String(item?.url ?? "").trim() || "https://example.com",
-            source: String(item?.source ?? "").trim() || "Unknown",
-            country: normalized,
-          });
+          items.push(normalizeBilingualItem(arr[i] as Record<string, unknown>, `item-${normalized}-${i + 1}`, normalized));
         }
       }
       return items;
     }
 
-    const items = Array.isArray(parsed) ? parsed : (parsed as { items?: NewsItem[] }).items ?? [];
-    return items.slice(0, 15).map((item, i) => ({
-      id: `item-${i + 1}`,
-      title: String(item.title ?? "").trim() || "Untitled",
-      summary: String(item.summary ?? "").trim() || "No summary.",
-      url: String(item.url ?? "").trim() || "https://example.com",
-      source: String(item.source ?? "").trim() || "Unknown",
-    }));
+    const rawItems = Array.isArray(parsed) ? parsed : (parsed as { items?: BilingualItem[] }).items ?? [];
+    return rawItems.slice(0, 15).map((item, i) =>
+      normalizeBilingualItem(item as Record<string, unknown>, `item-${i + 1}`)
+    );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     const is429 = msg.includes("429") || (err as { status?: number })?.status === 429;
@@ -101,13 +118,17 @@ function getQuotaErrorDigestItems(
   const countriesLabel = config.countries.length > 0
     ? config.countries.map((c) => c.charAt(0).toUpperCase() + c.slice(1)).join(", ")
     : "US";
+  const msgEn = isQuota
+    ? "API quota exceeded. Check your Groq plan at console.groq.com, then try again later."
+    : "Could not generate digest (API error). Check Lambda logs and try again.";
+  const msgZh = isQuota ? "API 配额已用尽。请到 console.groq.com 查看方案后重试。" : "无法生成摘要（API 错误）。请查看 Lambda 日志后重试。";
   return [
     {
       id: "error-1",
-      title: `Digest for ${date} (${countriesLabel})`,
-      summary: isQuota
-        ? "API quota exceeded. Check your Groq plan at console.groq.com, then try again later."
-        : "Could not generate digest (API error). Check Lambda logs and try again.",
+      titleEn: `Digest for ${date} (${countriesLabel})`,
+      titleZh: `${date} 摘要 (${countriesLabel})`,
+      summaryEn: msgEn,
+      summaryZh: msgZh,
       url: "https://console.groq.com/docs",
       source: "yoyo-news",
     },
@@ -121,8 +142,10 @@ function getMockDigestItems(config: UserConfig, date: string): NewsItem[] {
   return [
     {
       id: "mock-1",
-      title: `Top stories for ${countriesLabel} (${date})`,
-      summary: "Add GROQ_API_KEY (or GROK_API_KEY) to the DailyJob Lambda environment to get real digests.",
+      titleEn: `Top stories for ${countriesLabel} (${date})`,
+      titleZh: `${countriesLabel} 要闻 (${date})`,
+      summaryEn: "Add GROQ_API_KEY (or GROK_API_KEY) to the DailyJob Lambda environment to get real digests.",
+      summaryZh: "在 DailyJob Lambda 环境中配置 GROQ_API_KEY（或 GROK_API_KEY）以获取真实摘要。",
       url: "https://example.com",
       source: "yoyo-news",
     },

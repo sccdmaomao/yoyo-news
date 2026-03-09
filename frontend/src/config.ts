@@ -2,23 +2,16 @@ const STORAGE_KEY = "yoyo-news-config";
 
 export interface UserConfig {
   countries: string[];
-  language: string;
 }
 
 export const DEFAULT_CONFIG: UserConfig = {
   countries: ["us"],
-  language: "en",
 };
 
 export const COUNTRIES = [
   { value: "canada", label: "Canada" },
   { value: "china", label: "China" },
   { value: "us", label: "United States" },
-];
-
-export const LANGUAGES = [
-  { value: "en", label: "English" },
-  { value: "zh", label: "Chinese" },
 ];
 
 export function loadConfig(): UserConfig {
@@ -35,7 +28,6 @@ export function loadConfig(): UserConfig {
       const validCountries = countries.filter((c) => COUNTRIES.some((o) => o.value === c));
       return {
         countries: validCountries.length > 0 ? validCountries : DEFAULT_CONFIG.countries,
-        language: LANGUAGES.some((o) => o.value === parsed.language) ? parsed.language! : DEFAULT_CONFIG.language,
       };
     }
   } catch {

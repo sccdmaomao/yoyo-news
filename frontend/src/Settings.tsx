@@ -1,11 +1,5 @@
 import { useState } from "react";
-import {
-  loadConfig,
-  saveConfig,
-  COUNTRIES,
-  LANGUAGES,
-  type UserConfig,
-} from "./config";
+import { loadConfig, saveConfig, COUNTRIES, type UserConfig } from "./config";
 
 function toggleCountry(countries: string[], value: string): string[] {
   if (countries.includes(value)) {
@@ -26,7 +20,7 @@ export default function Settings() {
 
   return (
     <div>
-      <h1 style={{ marginBottom: "1rem" }}>Settings</h1>
+      <h1 className="page-title" style={{ marginBottom: "1rem" }}>Settings</h1>
       <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
         Your preferences are stored locally. The daily digest uses system defaults; this config is for display and future use.
       </p>
@@ -47,21 +41,6 @@ export default function Settings() {
               </label>
             ))}
           </div>
-        </div>
-        <div className="form-row">
-          <label>
-            Language
-            <select
-              value={config.language}
-              onChange={(e) => setConfig((c) => ({ ...c, language: e.target.value }))}
-            >
-              {LANGUAGES.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
         <button onClick={handleSave}>Save</button>
         {saved && <span style={{ marginLeft: "1rem", color: "var(--muted)" }}>Saved.</span>}
