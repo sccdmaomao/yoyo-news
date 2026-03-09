@@ -1,43 +1,42 @@
 const STORAGE_KEY = "yoyo-news-config";
 
 export interface UserConfig {
-  country: string;
+  countries: string[];
   language: string;
-  category: string;
 }
 
 export const DEFAULT_CONFIG: UserConfig = {
-  country: "US",
+  countries: ["us"],
   language: "en",
-  category: "sports",
 };
 
 export const COUNTRIES = [
-  { value: "US", label: "United States" },
-  { value: "GB", label: "United Kingdom" },
-  { value: "DE", label: "Germany" },
-  { value: "FR", label: "France" },
-  { value: "ES", label: "Spain" },
+  { value: "canada", label: "Canada" },
+  { value: "china", label: "China" },
+  { value: "us", label: "United States" },
 ];
 
 export const LANGUAGES = [
   { value: "en", label: "English" },
-  { value: "es", label: "Spanish" },
-  { value: "de", label: "German" },
-  { value: "fr", label: "French" },
-];
-
-export const CATEGORIES = [
-  { value: "sports", label: "Sports" },
-  { value: "economy", label: "Economy" },
+  { value: "zh", label: "Chinese" },
 ];
 
 export function loadConfig(): UserConfig {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as Partial<UserConfig>;
-      return { ...DEFAULT_CONFIG, ...parsed };
+      const parsed = JSON.parse(raw) as Partial<UserConfig & { country?: string; category?: string }>;
+      // Migrate old single country to countries array
+      const countries = Array.isArray(parsed.countries)
+        ? parsed.countries
+        : parsed.country
+          ? [parsed.country.toLowerCase()]
+          : DEFAULT_CONFIG.countries;
+      const validCountries = countries.filter((c) => COUNTRIES.some((o) => o.value === c));
+      return {
+        countries: validCountries.length > 0 ? validCountries : DEFAULT_CONFIG.countries,
+        language: LANGUAGES.some((o) => o.value === parsed.language) ? parsed.language! : DEFAULT_CONFIG.language,
+      };
     }
   } catch {
     /* ignore */

@@ -26,14 +26,12 @@ export interface DigestSummary {
 
 /** User config (frontend localStorage). */
 export interface UserConfig {
-  country: string;
+  countries: string[];
   language: string;
-  category: string;
 }
 
 /** Default config for the daily job when no per-user config exists. */
 export const DEFAULT_JOB_CONFIG: UserConfig = {
-  country: "US",
+  countries: ["us"],
   language: "en",
-  category: "sports",
 };

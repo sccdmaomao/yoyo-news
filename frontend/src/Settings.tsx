@@ -4,9 +4,15 @@ import {
   saveConfig,
   COUNTRIES,
   LANGUAGES,
-  CATEGORIES,
   type UserConfig,
 } from "./config";
+
+function toggleCountry(countries: string[], value: string): string[] {
+  if (countries.includes(value)) {
+    return countries.filter((c) => c !== value);
+  }
+  return [...countries, value];
+}
 
 export default function Settings() {
   const [config, setConfig] = useState<UserConfig>(loadConfig());
@@ -26,19 +32,21 @@ export default function Settings() {
       </p>
       <div className="card">
         <div className="form-row">
-          <label>
-            Country
-            <select
-              value={config.country}
-              onChange={(e) => setConfig((c) => ({ ...c, country: e.target.value }))}
-            >
-              {COUNTRIES.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <label style={{ display: "block", marginBottom: "0.5rem" }}>Countries</label>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem 1.5rem" }}>
+            {COUNTRIES.map((o) => (
+              <label key={o.value} style={{ display: "flex", alignItems: "center", gap: "0.35rem", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={config.countries.includes(o.value)}
+                  onChange={() =>
+                    setConfig((c) => ({ ...c, countries: toggleCountry(c.countries, o.value) }))
+                  }
+                />
+                <span>{o.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
         <div className="form-row">
           <label>
@@ -48,21 +56,6 @@ export default function Settings() {
               onChange={(e) => setConfig((c) => ({ ...c, language: e.target.value }))}
             >
               {LANGUAGES.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="form-row">
-          <label>
-            Category
-            <select
-              value={config.category}
-              onChange={(e) => setConfig((c) => ({ ...c, category: e.target.value }))}
-            >
-              {CATEGORIES.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>

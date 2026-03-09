@@ -52,7 +52,7 @@ export class YoyoNewsStack extends cdk.Stack {
     });
     rule.addTarget(new targets.LambdaFunction(dailyJob));
 
-    // Read API Lambda
+    // Read API Lambda (CJS so deps like OpenAI can use require('punycode') at runtime)
     const readApi = new lambdaNode.NodejsFunction(this, "ReadApi", {
       entry: join(backendPath, "lambdas", "read-api", "index.ts"),
       handler: "handler",
@@ -63,29 +63,40 @@ export class YoyoNewsStack extends cdk.Stack {
       bundling: {
         minify: true,
         sourceMap: true,
-        format: lambdaNode.OutputFormat.ESM,
+        format: lambdaNode.OutputFormat.CJS,
         mainFields: ["module", "main"],
       },
     });
-    table.grantReadData(readApi);
+    table.grantReadWriteData(readApi);
 
-    // HTTP API (API Gateway v2)
+    // HTTP API (API Gateway v2). defaultIntegration catches any unmatched route so Lambda always returns (with CORS).
+    const readApiIntegration = new integrations.HttpLambdaIntegration("ReadApiIntegration", readApi);
     const httpApi = new apigatewayv2.HttpApi(this, "HttpApi", {
       corsPreflight: {
         allowOrigins: ["*"],
-        allowMethods: [apigatewayv2.CorsHttpMethod.GET, apigatewayv2.CorsHttpMethod.OPTIONS],
+        allowMethods: [
+          apigatewayv2.CorsHttpMethod.GET,
+          apigatewayv2.CorsHttpMethod.POST,
+          apigatewayv2.CorsHttpMethod.OPTIONS,
+        ],
         allowHeaders: ["Content-Type"],
       },
+      defaultIntegration: readApiIntegration,
     });
     httpApi.addRoutes({
       path: "/digests",
       methods: [apigatewayv2.HttpMethod.GET],
-      integration: new integrations.HttpLambdaIntegration("ReadApiIntegration", readApi),
+      integration: readApiIntegration,
+    });
+    httpApi.addRoutes({
+      path: "/digests/refresh",
+      methods: [apigatewayv2.HttpMethod.POST],
+      integration: readApiIntegration,
     });
     httpApi.addRoutes({
       path: "/digests/{id}",
       methods: [apigatewayv2.HttpMethod.GET],
-      integration: new integrations.HttpLambdaIntegration("ReadApiIdIntegration", readApi),
+      integration: readApiIntegration,
     });
 
     // S3 bucket for frontend (static website hosting, public read)
