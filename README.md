@@ -109,6 +109,50 @@ npm run invoke-daily
 
 Or invoke the `DailyJob` Lambda from the AWS console or CLI.
 
+## Viewing CloudWatch logs (e.g. 500 on /digests/refresh)
+
+The **Read API** Lambda (handles GET /digests, GET /digests/:id, POST /digests/refresh) writes errors to CloudWatch. To see why a request fails:
+
+**Option 1 – Script**
+
+```powershell
+cd infrastructure
+npm run view-logs       # last hour of logs
+npm run view-logs:tail  # stream logs live (then trigger "Digest" in the app)
+```
+
+Or from `infrastructure/scripts`: `.\view-readapi-logs.ps1` / `.\view-readapi-logs.ps1 -Tail`
+
+**Option 2 – AWS Console**
+
+1. Open **AWS Console** → **CloudWatch** (region **ca-central-1**).
+2. **Logs** → **Log groups**.
+3. Open the group **`/aws/lambda/YoyoNewsStack-ReadApi...`** (name includes a random suffix from CDK).
+4. Open the latest **Log stream** and look for `POST /digests/refresh failed:` or other errors.
+
+**Option 3 – AWS CLI**
+
+```bash
+# List log groups to get the exact ReadApi name
+aws logs describe-log-groups --region ca-central-1 --log-group-name-prefix /aws/lambda/YoyoNewsStack-ReadApi
+
+# Tail logs (replace LOG_GROUP_NAME with the name from above)
+aws logs tail /aws/lambda/LOG_GROUP_NAME --region ca-central-1 --follow --format short
+```
+
+Trigger the failing request (e.g. click “Digest” in the app), then check the new log stream or the tail output for the error message and stack trace.
+
+### If refresh times out after 3 seconds
+
+The Read API Lambda may still have the default 3s timeout. Set it to 60s once:
+
+```powershell
+cd infrastructure
+npm run set-readapi-timeout
+```
+
+Or in **AWS Console** → **Lambda** → open **YoyoNewsStack-ReadApi...** → **Configuration** → **General configuration** → **Edit** → **Timeout** 1 min → **Save**.
+
 ## License
 
 MIT

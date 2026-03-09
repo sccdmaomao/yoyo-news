@@ -2,7 +2,7 @@ import type { APIGatewayProxyHandlerV2 } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { getTableName, listDigests, getDigest, putDigest } from "../../shared/dynamo.js";
 import { generateDigestWithLlm } from "../../shared/llm.js";
-import { DEFAULT_JOB_CONFIG } from "../../shared/types.js";
+import { DEFAULT_JOB_CONFIG, type UserConfig } from "../../shared/types.js";
 
 const dynamo = new DynamoDBClient({});
 
@@ -57,13 +57,39 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
       return { statusCode: 204, headers: CORS_HEADERS };
     }
 
-    // POST /digests/refresh — generate and save today's digest, then return it
+    // POST /digests/refresh — generate and save today's digest, then return it (optional body: { countries?, language? })
     if (method === "POST" && (path === "/digests/refresh" || path === "/digests/refresh/")) {
+      const date = new Date().toISOString().slice(0, 10);
       try {
-        const date = new Date().toISOString().slice(0, 10);
-        const items = await generateDigestWithLlm(DEFAULT_JOB_CONFIG, date);
+        let config: UserConfig = { ...DEFAULT_JOB_CONFIG };
+        let body: string | undefined = event.body;
+        console.log("[refresh] POST /digests/refresh received", { date });
+        if (typeof body === "string" && event.isBase64Encoded) {
+          try {
+            body = Buffer.from(body, "base64").toString("utf8");
+          } catch {
+            body = undefined;
+          }
+        }
+        if (body) {
+          try {
+            const parsed = JSON.parse(body) as Partial<UserConfig>;
+            if (Array.isArray(parsed.countries) && parsed.countries.length > 0) {
+              config = {
+                countries: parsed.countries.filter((c) => typeof c === "string") as string[],
+                language: typeof parsed.language === "string" ? parsed.language : config.language,
+              };
+            }
+          } catch {
+            /* ignore invalid body, use default config */
+          }
+        }
+        console.log("[refresh] config", { countries: config.countries, language: config.language });
+        const items = await generateDigestWithLlm(config, date);
+        console.log("[refresh] LLM returned", items.length, "items");
         await putDigest(dynamo, tableName, date, items);
         const digest = await getDigest(dynamo, tableName, date);
+        console.log("[refresh] digest saved and returned", digest!.date);
         return withCors(
           200,
           JSON.stringify({
@@ -75,7 +101,7 @@ export const handler: APIGatewayProxyHandlerV2 = async (event) => {
         );
       } catch (err) {
         const message = errMessage(err);
-        console.error("POST /digests/refresh failed:", message, err instanceof Error ? err.stack : err);
+        console.error("[refresh] POST /digests/refresh failed:", message, err instanceof Error ? err.stack : err);
         return withCors(
           500,
           JSON.stringify({

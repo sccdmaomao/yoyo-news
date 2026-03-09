@@ -28,7 +28,7 @@ export class YoyoNewsStack extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-    // Daily job Lambda (CJS so deps like OpenAI can use require('punycode') at runtime)
+    // Daily job Lambda — must use CJS so OpenAI SDK's require('punycode') works
     const dailyJob = new lambdaNode.NodejsFunction(this, "DailyJob", {
       entry: join(backendPath, "lambdas", "daily-job", "index.ts"),
       handler: "handler",
@@ -41,7 +41,8 @@ export class YoyoNewsStack extends cdk.Stack {
         minify: true,
         sourceMap: true,
         format: lambdaNode.OutputFormat.CJS,
-        mainFields: ["module", "main"],
+        mainFields: ["main"],
+        externalModules: ["punycode"],
       },
     });
     table.grantReadWriteData(dailyJob);
@@ -52,23 +53,25 @@ export class YoyoNewsStack extends cdk.Stack {
     });
     rule.addTarget(new targets.LambdaFunction(dailyJob));
 
-    // Read API Lambda (CJS so deps like OpenAI can use require('punycode') at runtime)
+    // Read API Lambda — must use CJS so OpenAI SDK's require('punycode') works (ESM breaks in Lambda)
     const readApi = new lambdaNode.NodejsFunction(this, "ReadApi", {
       entry: join(backendPath, "lambdas", "read-api", "index.ts"),
       handler: "handler",
       runtime: lambda.Runtime.NODEJS_20_X,
+      timeout: cdk.Duration.seconds(60), // Groq multi-country digest can take 30s+
       environment: {
         DYNAMODB_TABLE_NAME: table.tableName,
+        NODE_OPTIONS: "--enable-source-maps",
       },
       bundling: {
         minify: true,
         sourceMap: true,
         format: lambdaNode.OutputFormat.CJS,
-        mainFields: ["module", "main"],
+        mainFields: ["main"], // prefer CommonJS entry to avoid ESM output
+        externalModules: ["punycode"],
       },
     });
     table.grantReadWriteData(readApi);
-
     // HTTP API (API Gateway v2). defaultIntegration catches any unmatched route so Lambda always returns (with CORS).
     const readApiIntegration = new integrations.HttpLambdaIntegration("ReadApiIntegration", readApi);
     const httpApi = new apigatewayv2.HttpApi(this, "HttpApi", {

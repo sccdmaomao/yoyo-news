@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { listDigests, refreshTodayDigest, type DigestSummary } from "./api";
+import { loadConfig } from "./config";
 
 export default function DigestList() {
   const navigate = useNavigate();
@@ -26,7 +27,8 @@ export default function DigestList() {
     setRefreshing(true);
     setError(null);
     try {
-      await refreshTodayDigest();
+      const config = loadConfig();
+      await refreshTodayDigest({ countries: config.countries, language: config.language });
       load();
       const today = new Date().toISOString().slice(0, 10);
       navigate(`/digests/${today}`);

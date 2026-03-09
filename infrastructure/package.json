@@ -9,7 +9,10 @@
     "deploy": "cdk deploy --require-approval never",
     "synth": "cdk synth",
     "destroy": "cdk destroy",
-    "invoke-daily": "node scripts/invoke-daily-job.mjs"
+    "invoke-daily": "node scripts/invoke-daily-job.mjs",
+    "view-logs": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/view-readapi-logs.ps1",
+    "view-logs:tail": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/view-readapi-logs.ps1 -Tail",
+    "set-readapi-timeout": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/set-readapi-timeout.ps1"
   },
   "dependencies": {
     "aws-cdk-lib": "^2.170.0",

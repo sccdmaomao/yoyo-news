@@ -100,6 +100,17 @@ select {
   color: var(--muted);
 }
 
+.digest-columns {
+  display: grid;
+  gap: 1.5rem;
+  align-items: start;
+}
+@media (max-width: 640px) {
+  .digest-columns {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .form-row {
   display: flex;
   gap: 1rem;

@@ -6,6 +6,8 @@ export interface NewsItem {
   url: string;
   source: string;
   publishedAt?: string;
+  /** Set when digest is generated for multiple countries (one column per country). */
+  country?: string;
 }
 
 /** Full digest stored in DynamoDB (Option A: one per day). */

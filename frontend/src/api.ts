@@ -14,6 +14,8 @@ export interface NewsItem {
   url: string;
   source: string;
   publishedAt?: string;
+  /** Set when digest is multi-country (one column per country). */
+  country?: string;
 }
 
 export interface Digest {
@@ -58,9 +60,13 @@ export async function getDigest(id: string): Promise<Digest | null> {
   return (await res.json()) as Digest;
 }
 
-/** Trigger manual generation of today's digest, then return it. */
-export async function refreshTodayDigest(): Promise<Digest> {
-  const res = await fetch(`${API_BASE}/digests/refresh`, { method: "POST" });
+/** Trigger manual generation of today's digest, then return it. Pass config for countries/language (e.g. from Settings). */
+export async function refreshTodayDigest(config?: { countries?: string[]; language?: string }): Promise<Digest> {
+  const res = await fetch(`${API_BASE}/digests/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: config ? JSON.stringify(config) : undefined,
+  });
   if (!res.ok) return apiError(res, "Failed to refresh digest");
   return (await res.json()) as Digest;
 }
