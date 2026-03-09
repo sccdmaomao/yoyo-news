@@ -11,7 +11,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           yoyo-news
         </Link>
         <nav>
-          <Link to="/">Digests</Link>
+          <Link to="/">Today</Link>
+          <Link to="/digests">Past digests</Link>
           <Link to="/settings">Settings</Link>
           <button
             type="button"
