@@ -17,14 +17,28 @@ export default function DigestDetail() {
       .finally(() => setLoading(false));
   }, [date]);
 
-  if (loading) return <p>Loading…</p>;
-  if (error) return <p style={{ color: "var(--error)" }}>{error}</p>;
-  if (!digest) return <p>Digest not found.</p>;
+  if (loading) {
+    return (
+      <p className="loading-state" aria-live="polite" aria-busy="true">
+        Loading digest…
+      </p>
+    );
+  }
+  if (error) {
+    return (
+      <p role="alert" aria-live="polite" style={{ color: "var(--error)" }}>
+        {error}
+      </p>
+    );
+  }
+  if (!digest) {
+    return <p>Digest not found.</p>;
+  }
 
   return (
     <div>
       <p>
-        <Link to="/digests">← Back to past digests</Link>
+        <Link to="/digests">← Past roundups</Link>
       </p>
       <DigestBody digest={digest} />
     </div>

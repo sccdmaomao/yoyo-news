@@ -18,31 +18,45 @@ export default function DigestList() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p>Loading past digests…</p>;
+  if (loading) {
+    return (
+      <p className="loading-state" aria-live="polite" aria-busy="true">
+        Loading past roundups…
+      </p>
+    );
+  }
 
   return (
     <div>
       <p style={{ marginBottom: "1rem" }}>
-        <Link to="/">← Back to today</Link>
+        <Link to="/">← Today</Link>
       </p>
       <h1 className="page-title" style={{ marginBottom: "1rem" }}>
-        Past digests
+        Past roundups
       </h1>
       <p style={{ color: "var(--muted)", marginBottom: "1rem" }}>
-        Last 90 days (newest first). Click a date to read that day&apos;s digest.
+        Last 90 days, newest first. Pick a date to read.
       </p>
-      {error && <p style={{ color: "var(--error)", marginBottom: "1rem" }}>{error}</p>}
-      {digests.length === 0 && (
-        <p style={{ color: "var(--muted)" }}>No past digests. Today&apos;s digest appears on the home page.</p>
+      {error && (
+        <p role="alert" aria-live="polite" style={{ color: "var(--error)", marginBottom: "1rem" }}>
+          {error}
+        </p>
       )}
-      {digests.map((d) => (
-        <Link to={`/digests/${d.id}`} key={d.id} style={{ display: "block", color: "inherit" }}>
-          <div className="card" style={{ cursor: "pointer" }}>
-            <h2>{d.date}</h2>
-            <p>Created {new Date(d.createdAt).toLocaleString()}</p>
-          </div>
-        </Link>
-      ))}
+      {digests.length === 0 && (
+        <p style={{ color: "var(--muted)" }}>No past roundups yet—today&apos;s is on the home page.</p>
+      )}
+      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        {digests.map((d) => (
+          <li key={d.id}>
+            <Link to={`/digests/${d.id}`} className="card-link">
+              <div className="card" style={{ cursor: "pointer" }}>
+                <h2>{d.date}</h2>
+                <p>Ready {new Date(d.createdAt).toLocaleString()}</p>
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

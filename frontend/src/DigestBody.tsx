@@ -5,7 +5,6 @@ import {
   useReadingLanguage,
   getDisplayTitle,
   getDisplaySummary,
-  type ReadingLang,
 } from "./ReadingLanguageContext";
 
 function getCountryLabel(code: string): string {
@@ -26,11 +25,13 @@ function groupByCountry(items: NewsItem[]): Map<string, NewsItem[]> {
 
 interface DigestBodyProps {
   digest: Digest;
+  /** When false, omit the date heading (e.g. when Home already shows it). */
+  showDate?: boolean;
 }
 
 /** Renders a single digest's content (date, lang toggle, items). Used on home (today) and digest detail (any date). */
-export default function DigestBody({ digest }: DigestBodyProps) {
-  const { readingLang, setReadingLang } = useReadingLanguage();
+export default function DigestBody({ digest, showDate = true }: DigestBodyProps) {
+  const { readingLang } = useReadingLanguage();
   const byCountry = useMemo(
     () => (digest ? groupByCountry(digest.items) : new Map<string, NewsItem[]>()),
     [digest]
@@ -39,45 +40,13 @@ export default function DigestBody({ digest }: DigestBodyProps) {
   const multiCountry =
     hasCountryLabels && (byCountry.size > 1 || (byCountry.size === 1 && !byCountry.has("")));
 
-  const toggleLang = (next: ReadingLang) => () => setReadingLang(next);
-
   return (
     <>
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          alignItems: "center",
-          gap: "0.75rem 1.5rem",
-          marginBottom: "1rem",
-        }}
-      >
-        <h1 className="page-title" style={{ marginBottom: 0 }}>
+      {showDate && (
+        <h1 className="page-title" style={{ marginBottom: "1.5rem"}}>
           {digest.date}
-        </h1>
-        <span className="reading-lang-toggle">
-          Read in:{" "}
-          <button
-            type="button"
-            className={`reading-lang-btn ${readingLang === "en" ? "active" : ""}`}
-            onClick={toggleLang("en")}
-            aria-pressed={readingLang === "en"}
-          >
-            English
-          </button>
-          <button
-            type="button"
-            className={`reading-lang-btn ${readingLang === "zh" ? "active" : ""}`}
-            onClick={toggleLang("zh")}
-            aria-pressed={readingLang === "zh"}
-          >
-            中文
-          </button>
-        </span>
-      </div>
-      <p style={{ color: "var(--muted)", marginBottom: "1.5rem" }}>
-        {new Date(digest.createdAt).toLocaleString()}
-      </p>
+        </h1> 
+      )}
       {multiCountry ? (
         <div
           className="digest-columns"
@@ -94,7 +63,12 @@ export default function DigestBody({ digest }: DigestBodyProps) {
                 {items.map((item, i) => (
                   <div className="news-item" key={item.id ?? i}>
                     <div className="title">
-                      <a href={item.url} target="_blank" rel="noopener noreferrer">
+                      <a
+                        href={item.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="news-link"
+                      >
                         {getDisplayTitle(item, readingLang)}
                       </a>
                     </div>
@@ -110,7 +84,12 @@ export default function DigestBody({ digest }: DigestBodyProps) {
           {digest.items.map((item, i) => (
             <div className="news-item" key={item.id ?? i}>
               <div className="title">
-                <a href={item.url} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={item.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="news-link"
+                >
                   {getDisplayTitle(item, readingLang)}
                 </a>
               </div>
