@@ -1,0 +1,14 @@
+---
+description: Use project-root skills from .cursor/skills when running tasks
+alwaysApply: true
+---
+
+# Use project skills when running tasks
+
+When running any task in this project:
+
+1. **Look for skills in the project root** at `.cursor/skills/` (relative to the workspace/project root).
+2. **Automatically consider** each skill in that directory: read each subfolder’s `SKILL.md` frontmatter (name + description) to decide if the skill applies to the current request.
+3. **Apply relevant skills** by reading and following the full `SKILL.md` (and any referenced files) for skills whose description matches the task.
+
+Project skills in this repo include backend (SAM, DynamoDB), React/Next performance (vercel-react-best-practices), and web design guidelines. Prefer these project skills when they match the task over generic approaches.
